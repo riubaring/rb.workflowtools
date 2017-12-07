@@ -1,5 +1,5 @@
 /*!
- * rb.workflowtools v1.0.9
+ * rb.workflowtools v1.0.10
  * Docs & License: tba
  * (c) 2015 Riu Baring
  */
@@ -77,12 +77,12 @@
 											users.push({ "id" : initiatorUserId.split('\\')[1], "user": user });
 										}
 									}
-			
+
 									history.push({ 
 										"itemId": itemId,
 										"initiatorUserId": initiatorUserId,
-										"instanceCreated": data[j].get_instanceCreated().format('M/d/yyyy hh:mm:ss tt'),
-										"lastUpdated": data[j].get_lastUpdated().format('M/d/yyyy hh:mm:ss tt'),
+										"instanceCreated": getDate(new Date(data[j].get_instanceCreated())),
+										"lastUpdated": getDate(new Date(data[j].get_lastUpdated())),
 										"statusId": r.get_id(),
 										"statusText": r.get_text()
 									});
@@ -98,12 +98,12 @@
 									if(r.get_inArray(selectedStatus) != -1) {
 										$('#' + listGUID + '-table tbody').append(template({
 											name: 'rb-tableRow',
-											initiatedOn: data[j].get_instanceCreated().format('M/d/yyyy hh:mm:ss tt'),
+											initiatedOn: getDate(new Date(data[j].get_instanceCreated())),
 											initiatorUserId: (initiatorUserId != undefined ? initiatorUserId.split('|')[1] : initiatorUserId),
 											itemUrl: siteUrl + '/' + data[j].get_properties()["Microsoft.SharePoint.ActivationProperties.CurrentItemUrl"],
 											itemId: itemId,
 											workflowName: workflowCollection[i].subscription.get_name(),
-											button: r.get_buttonHTML(JSON.stringify(d)),
+											button: r.get_buttonHTML(d),
 											internalStatus: r.get_text(),
 											userStatus: data[j].get_userStatus(),
 											faultInfo: data[j].get_faultInfo()
@@ -116,7 +116,6 @@
 								.done(function() {
 									for(var i = 0; i < users.length; i++) {										
 										$(theContainer).find('td > div:contains("' + users[i].id + '")').replaceWith('Initiated By: ' + users[i].user.get_title() + ' (' + users[i].id + ')');
-//										$(theContainer).find('td > div:contains("' + users[i].id + '")').replaceWith('Initiated By: ' + users[i].user.get_title() + ' (' + users[i].id + ')');
 									}
 								})
 						})	
@@ -147,11 +146,6 @@
 								} else {
 									startWorkflow(JSON.parse($(this).attr('data-value')), siteUrl, theContainer);
 								}
-								
-								//SP.UI.ModalDialog.showModalDialog({
-								//	title: 'Start Workflow Not Implemented',
-								//	html: dialogMessage('This feature is not implemented yet.<br/>Please contact Riu Baring at riubaring@gmail.com for more info.'),
-								//});
 							});
 							
 							//Bind click event to Terminate button
@@ -269,6 +263,11 @@
 			);
 			
 			return deferred;
+		}
+		
+		function getDate(d) {
+			d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+			return d.format('M/d/yyyy hh:mm:ss tt');
 		}
 		
 		// =============================================================
@@ -495,17 +494,24 @@
 		get_buttonHTML(d) {
 			function template(text, id, dataValue) {
 				var r = '<div class="rb-button-wrapper-small">';
-					r +='	<div id="button-' + text + '-' + id + '" data-value=\'' + d + '\'  style="overflow: hidden; text-align: center;">';
+					r +='	<div id="button-' + text + '-' + id + '" data-value=\'' + JSON.stringify(dataValue) + '\'  style="overflow: hidden; text-align: center;">';
 					r += '		<h4 class="rb-button rb-button-' + text.toString().toLowerCase() + '">' + text + '</h4>';
 					r += '	</div>';
 					r += '</div>';
 				return r;
 			}
 			
-			var u = '', buttons = this.buttonCollection[this.id];
-			for(var i = 0; i < buttons.length; i++) {
-				u += template(buttons[i], this.instanceGUID, d);
+			var u = '';
+			
+			if(d.itemId > 0 && d.itemId != undefined) {
+				var buttons = this.buttonCollection[this.id];
+				for(var i = 0; i < buttons.length; i++) {
+					u += template(buttons[i], this.instanceGUID, d);
+				}
+			} else if(this.id == 2) {
+				u += template('Terminate', this.instanceGUID, d);
 			}
+			
 			return u;
 		}
 		
